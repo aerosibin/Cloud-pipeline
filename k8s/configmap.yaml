@@ -1,0 +1,33 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: cloud-pipeline-config
+  namespace: cloud-pipeline
+  labels:
+    app: cloud-pipeline-app
+data:
+  app.properties: |
+    # Application configuration — mounted at /app/config/app.properties
+    spring.application.name=cloud-pipeline-app
+    server.port=8080
+
+    # Logging — INFO level for production
+    logging.level.root=INFO
+    logging.level.com.cloudpipeline=INFO
+    logging.level.org.springframework=WARN
+
+    # Actuator
+    management.endpoints.web.exposure.include=health,info
+    management.endpoint.health.show-details=always
+    management.endpoint.health.probes.enabled=true
+
+    # App metadata
+    info.app.name=Cloud Pipeline Demo App
+    info.app.version=1.0.0
+    info.app.description=End-to-End CI/CD Pipeline Demo Application
+
+  environment.properties: |
+    # Environment-specific settings
+    spring.profiles.active=production
+    app.deployment.platform=kubernetes
+    app.deployment.cloud=azure-aks

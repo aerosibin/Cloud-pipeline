@@ -1,0 +1,33 @@
+# Exclude build artifacts and IDE files
+target/
+*.class
+
+# Exclude version control metadata
+.git/
+.gitignore
+
+# Exclude CI/CD pipeline config (not needed in image)
+.github/
+
+# Exclude documentation
+*.md
+*.txt
+
+# Exclude infrastructure-as-code (not needed in image)
+ansible/
+k8s/
+
+# Exclude local environment files
+.env
+.env.*
+
+# Exclude IDE project files
+.idea/
+*.iml
+*.iws
+.vscode/
+*.DS_Store
+
+# Exclude log files
+*.log
+logs/

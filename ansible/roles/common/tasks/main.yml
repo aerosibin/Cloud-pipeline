@@ -1,0 +1,98 @@
+---
+# ============================================================
+# Role: common
+# Tasks: Install system packages, configure baseline settings
+# ============================================================
+
+- name: Update apt package cache
+  apt:
+    update_cache: true
+    cache_valid_time: 3600
+  tags: packages
+
+- name: Install essential system packages
+  apt:
+    name:
+      - git
+      - curl
+      - wget
+      - unzip
+      - vim
+      - htop
+      - net-tools
+      - ca-certificates
+      - gnupg
+      - lsb-release
+      - apt-transport-https
+      - software-properties-common
+      - python3
+      - python3-pip
+    state: present
+  tags: packages
+
+- name: Upgrade all installed packages to latest
+  apt:
+    upgrade: dist
+    autoremove: true
+    autoclean: true
+  tags: packages
+
+- name: Set system hostname fact
+  debug:
+    msg: "Running common role on {{ inventory_hostname }}"
+  tags: always
+
+- name: Ensure /etc/hosts contains localhost entry
+  lineinfile:
+    path: /etc/hosts
+    regexp: '^127\.0\.0\.1\s+localhost'
+    line: '127.0.0.1   localhost'
+    state: present
+  tags: networking
+
+- name: Disable swap (required for Kubernetes)
+  command: swapoff -a
+  when: ansible_swaptotal_mb > 0
+  tags: kubernetes
+
+- name: Remove swap entry from /etc/fstab (persistent)
+  replace:
+    path: /etc/fstab
+    regexp: '^([^#].*\sswap\s.*)$'
+    replace: '# \1'
+  tags: kubernetes
+
+- name: Load kernel modules required by Kubernetes
+  modprobe:
+    name: "{{ item }}"
+    state: present
+  loop:
+    - overlay
+    - br_netfilter
+  tags: kubernetes
+
+- name: Persist kernel modules across reboots
+  copy:
+    dest: /etc/modules-load.d/k8s.conf
+    content: |
+      overlay
+      br_netfilter
+    mode: '0644'
+  tags: kubernetes
+
+- name: Apply sysctl settings for Kubernetes networking
+  sysctl:
+    name: "{{ item.name }}"
+    value: "{{ item.value }}"
+    state: present
+    reload: true
+  loop:
+    - { name: "net.bridge.bridge-nf-call-iptables",  value: "1" }
+    - { name: "net.bridge.bridge-nf-call-ip6tables", value: "1" }
+    - { name: "net.ipv4.ip_forward",                 value: "1" }
+  tags: kubernetes
+
+- name: Print common role completion message
+  debug:
+    msg: "Common role applied successfully on {{ inventory_hostname }}"
+  tags: always

@@ -1,0 +1,8 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: cloud-pipeline
+  labels:
+    name: cloud-pipeline
+    managed-by: kubectl
+    environment: production

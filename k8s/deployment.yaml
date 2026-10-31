@@ -1,0 +1,94 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: cloud-pipeline-app
+  namespace: cloud-pipeline
+  labels:
+    app: cloud-pipeline-app
+    version: "1.0.0"
+    managed-by: jenkins
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: cloud-pipeline-app
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  template:
+    metadata:
+      labels:
+        app: cloud-pipeline-app
+        version: "1.0.0"
+    spec:
+      # Security context: run as non-root
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        fsGroup: 1000
+
+      containers:
+        - name: cloud-pipeline-app
+          # Image from Azure Container Registry — Jenkins updates this tag on each build
+          image: cloudpipelineacr.azurecr.io/cloud-pipeline-app:latest
+          imagePullPolicy: Always
+          ports:
+            - name: http
+              containerPort: 8080
+              protocol: TCP
+
+          # Environment variables
+          env:
+            - name: SPRING_PROFILES_ACTIVE
+              value: "production"
+            - name: APP_VERSION
+              value: "1.0.0"
+            - name: JAVA_OPTS
+              value: "-XX:+UseContainerSupport -XX:MaxRAMPercentage=75.0"
+
+          # Resource limits and requests
+          resources:
+            requests:
+              cpu: "100m"
+              memory: "128Mi"
+            limits:
+              cpu: "500m"
+              memory: "512Mi"
+
+          # Liveness probe: restart container if /health fails
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8080
+            initialDelaySeconds: 60
+            periodSeconds: 30
+            timeoutSeconds: 10
+            failureThreshold: 3
+            successThreshold: 1
+
+          # Readiness probe: remove from service until /health passes
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8080
+            initialDelaySeconds: 30
+            periodSeconds: 15
+            timeoutSeconds: 5
+            failureThreshold: 3
+            successThreshold: 1
+
+          # Volume mount for ConfigMap
+          volumeMounts:
+            - name: app-config
+              mountPath: /app/config
+              readOnly: true
+
+      volumes:
+        - name: app-config
+          configMap:
+            name: cloud-pipeline-config
+
+      # Graceful termination
+      terminationGracePeriodSeconds: 30

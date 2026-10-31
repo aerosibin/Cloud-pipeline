@@ -1,0 +1,23 @@
+# ============================================================
+# Service — exposes the app via Azure Load Balancer
+# ============================================================
+apiVersion: v1
+kind: Service
+metadata:
+  name: cloud-pipeline-app-service
+  namespace: cloud-pipeline
+  labels:
+    app: cloud-pipeline-app
+  annotations:
+    # Azure: Public external Load Balancer
+    service.beta.kubernetes.io/azure-load-balancer-internal: "false"
+spec:
+  type: LoadBalancer
+  selector:
+    app: cloud-pipeline-app
+  ports:
+    - name: http
+      protocol: TCP
+      port: 80
+      targetPort: 8080
+  sessionAffinity: None
