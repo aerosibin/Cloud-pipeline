@@ -1,6 +1,7 @@
 // ============================================================
 // Jenkinsfile — Cloud Pipeline Demo App
-// CI/CD: Maven Build → Test → Docker → ACR → AKS
+// Cross-Platform CI/CD (Windows & Linux Jenkins agents)
+// Maven Build → Test → Docker → Azure ACR → Azure AKS
 //
 // Required Jenkins Credentials:
 //   - azure-client-id      : Azure Service Principal App ID     (Secret Text)
@@ -10,7 +11,7 @@
 //
 // Required Jenkins Plugins:
 //   - Pipeline, Git, Docker Pipeline, Credentials Binding,
-//     JUnit, Workspace Cleanup, Azure Credentials (optional)
+//     JUnit, Workspace Cleanup
 // ============================================================
 
 pipeline {
@@ -56,10 +57,18 @@ pipeline {
                 echo '========== Stage 1: Checkout Source Code =========='
                 checkout scm
                 script {
-                    env.GIT_COMMIT_SHORT = sh(
-                        script: 'git rev-parse --short HEAD',
-                        returnStdout: true
-                    ).trim()
+                    if (isUnix()) {
+                        env.GIT_COMMIT_SHORT = sh(
+                            script: 'git rev-parse --short HEAD',
+                            returnStdout: true
+                        ).trim()
+                    } else {
+                        def commit = bat(
+                            script: '@git rev-parse --short HEAD',
+                            returnStdout: true
+                        ).trim()
+                        env.GIT_COMMIT_SHORT = commit.tokenize('\r\n').last().trim()
+                    }
                     env.IMAGE_TAG = "${BUILD_NUMBER}-${env.GIT_COMMIT_SHORT}"
                     echo "Build tag: ${env.IMAGE_TAG}"
                 }
@@ -70,7 +79,13 @@ pipeline {
         stage('Compile') {
             steps {
                 echo '========== Stage 2: Maven Compile =========='
-                sh 'mvn clean compile -B -q'
+                script {
+                    if (isUnix()) {
+                        sh 'mvn clean compile -B -q'
+                    } else {
+                        bat 'call mvn clean compile -B -q'
+                    }
+                }
             }
         }
 
@@ -78,7 +93,13 @@ pipeline {
         stage('Test') {
             steps {
                 echo '========== Stage 3: Run Unit Tests =========='
-                sh 'mvn test -B'
+                script {
+                    if (isUnix()) {
+                        sh 'mvn test -B'
+                    } else {
+                        bat 'call mvn test -B'
+                    }
+                }
             }
             post {
                 always {
@@ -96,7 +117,13 @@ pipeline {
         stage('Package') {
             steps {
                 echo '========== Stage 4: Maven Package (fat JAR) =========='
-                sh 'mvn package -DskipTests -B'
+                script {
+                    if (isUnix()) {
+                        sh 'mvn package -DskipTests -B'
+                    } else {
+                        bat 'call mvn package -DskipTests -B'
+                    }
+                }
                 archiveArtifacts artifacts: 'target/cloud-pipeline-app.jar',
                                  fingerprint: true
                 echo 'JAR archived: target/cloud-pipeline-app.jar'
@@ -107,16 +134,30 @@ pipeline {
         stage('Docker Build') {
             steps {
                 echo '========== Stage 5: Build Docker Image =========='
-                sh """
-                    docker build \\
-                        --tag ${IMAGE_BASE}:${IMAGE_TAG} \\
-                        --tag ${IMAGE_BASE}:latest \\
-                        --label "build.number=${BUILD_NUMBER}" \\
-                        --label "git.commit=${GIT_COMMIT_SHORT}" \\
-                        --label "build.url=${BUILD_URL}" \\
-                        .
-                """
-                echo "Image built: ${IMAGE_BASE}:${IMAGE_TAG}"
+                script {
+                    if (isUnix()) {
+                        sh """
+                            docker build \\
+                                --tag ${IMAGE_BASE}:${IMAGE_TAG} \\
+                                --tag ${IMAGE_BASE}:latest \\
+                                --label "build.number=${BUILD_NUMBER}" \\
+                                --label "git.commit=${GIT_COMMIT_SHORT}" \\
+                                --label "build.url=${BUILD_URL}" \\
+                                .
+                        """
+                    } else {
+                        bat """
+                            docker build ^
+                                --tag ${IMAGE_BASE}:${IMAGE_TAG} ^
+                                --tag ${IMAGE_BASE}:latest ^
+                                --label "build.number=${BUILD_NUMBER}" ^
+                                --label "git.commit=${GIT_COMMIT_SHORT}" ^
+                                --label "build.url=${BUILD_URL}" ^
+                                .
+                        """
+                    }
+                    echo "Image built: ${IMAGE_BASE}:${IMAGE_TAG}"
+                }
             }
         }
 
@@ -130,27 +171,38 @@ pipeline {
                     string(credentialsId: 'azure-tenant-id',       variable: 'AZURE_TENANT_ID'),
                     string(credentialsId: 'azure-subscription-id', variable: 'AZURE_SUBSCRIPTION_ID')
                 ]) {
-                    sh """
-                        # Login to Azure using service principal
-                        az login --service-principal \\
-                            --username  "\$AZURE_CLIENT_ID" \\
-                            --password  "\$AZURE_CLIENT_SECRET" \\
-                            --tenant    "\$AZURE_TENANT_ID" \\
-                            --output    none
+                    script {
+                        if (isUnix()) {
+                            sh """
+                                az login --service-principal \\
+                                    --username  "\$AZURE_CLIENT_ID" \\
+                                    --password  "\$AZURE_CLIENT_SECRET" \\
+                                    --tenant    "\$AZURE_TENANT_ID" \\
+                                    --output    none
 
-                        az account set --subscription "\$AZURE_SUBSCRIPTION_ID"
+                                az account set --subscription "\$AZURE_SUBSCRIPTION_ID"
+                                az acr login --name ${ACR_NAME}
+                                docker push ${IMAGE_BASE}:${IMAGE_TAG}
+                                docker push ${IMAGE_BASE}:latest
+                            """
+                        } else {
+                            bat """
+                                call az login --service-principal ^
+                                    --username  "%AZURE_CLIENT_ID%" ^
+                                    --password  "%AZURE_CLIENT_SECRET%" ^
+                                    --tenant    "%AZURE_TENANT_ID%" ^
+                                    --output    none
 
-                        # Authenticate Docker to ACR
-                        az acr login --name ${ACR_NAME}
-
-                        # Push both tags
-                        docker push ${IMAGE_BASE}:${IMAGE_TAG}
-                        docker push ${IMAGE_BASE}:latest
-
+                                call az account set --subscription "%AZURE_SUBSCRIPTION_ID%"
+                                call az acr login --name ${ACR_NAME}
+                                docker push ${IMAGE_BASE}:${IMAGE_TAG}
+                                docker push ${IMAGE_BASE}:latest
+                            """
+                        }
                         echo "Pushed:"
                         echo "  → ${IMAGE_BASE}:${IMAGE_TAG}"
                         echo "  → ${IMAGE_BASE}:latest"
-                    """
+                    }
                 }
             }
         }
@@ -165,38 +217,61 @@ pipeline {
                     string(credentialsId: 'azure-tenant-id',       variable: 'AZURE_TENANT_ID'),
                     string(credentialsId: 'azure-subscription-id', variable: 'AZURE_SUBSCRIPTION_ID')
                 ]) {
-                    sh """
-                        # Login to Azure
-                        az login --service-principal \\
-                            --username  "\$AZURE_CLIENT_ID" \\
-                            --password  "\$AZURE_CLIENT_SECRET" \\
-                            --tenant    "\$AZURE_TENANT_ID" \\
-                            --output    none
+                    script {
+                        if (isUnix()) {
+                            sh """
+                                az login --service-principal \\
+                                    --username  "\$AZURE_CLIENT_ID" \\
+                                    --password  "\$AZURE_CLIENT_SECRET" \\
+                                    --tenant    "\$AZURE_TENANT_ID" \\
+                                    --output    none
 
-                        az account set --subscription "\$AZURE_SUBSCRIPTION_ID"
+                                az account set --subscription "\$AZURE_SUBSCRIPTION_ID"
 
-                        # Fetch AKS credentials → writes ~/.kube/config
-                        az aks get-credentials \\
-                            --resource-group ${AKS_RESOURCE_GROUP} \\
-                            --name           ${AKS_CLUSTER} \\
-                            --overwrite-existing
+                                az aks get-credentials \\
+                                    --resource-group ${AKS_RESOURCE_GROUP} \\
+                                    --name           ${AKS_CLUSTER} \\
+                                    --overwrite-existing
 
-                        # Ensure namespace exists
-                        kubectl apply -f k8s/namespace.yaml
+                                kubectl apply -f k8s/namespace.yaml
+                                kubectl apply -f k8s/configmap.yaml -n ${K8S_NAMESPACE}
 
-                        # Apply ConfigMap
-                        kubectl apply -f k8s/configmap.yaml -n ${K8S_NAMESPACE}
+                                kubectl set image deployment/cloud-pipeline-app \\
+                                    cloud-pipeline-app=${IMAGE_BASE}:${IMAGE_TAG} \\
+                                    -n ${K8S_NAMESPACE}
 
-                        # Update running deployment to the new image tag
-                        kubectl set image deployment/cloud-pipeline-app \\
-                            cloud-pipeline-app=${IMAGE_BASE}:${IMAGE_TAG} \\
-                            -n ${K8S_NAMESPACE}
+                                kubectl rollout status deployment/cloud-pipeline-app \\
+                                    -n ${K8S_NAMESPACE} \\
+                                    --timeout=300s
+                            """
+                        } else {
+                            bat """
+                                call az login --service-principal ^
+                                    --username  "%AZURE_CLIENT_ID%" ^
+                                    --password  "%AZURE_CLIENT_SECRET%" ^
+                                    --tenant    "%AZURE_TENANT_ID%" ^
+                                    --output    none
 
-                        # Wait for rolling update to complete (max 5 min)
-                        kubectl rollout status deployment/cloud-pipeline-app \\
-                            -n ${K8S_NAMESPACE} \\
-                            --timeout=300s
-                    """
+                                call az account set --subscription "%AZURE_SUBSCRIPTION_ID%"
+
+                                call az aks get-credentials ^
+                                    --resource-group ${AKS_RESOURCE_GROUP} ^
+                                    --name           ${AKS_CLUSTER} ^
+                                    --overwrite-existing
+
+                                kubectl apply -f k8s/namespace.yaml
+                                kubectl apply -f k8s/configmap.yaml -n ${K8S_NAMESPACE}
+
+                                kubectl set image deployment/cloud-pipeline-app ^
+                                    cloud-pipeline-app=${IMAGE_BASE}:${IMAGE_TAG} ^
+                                    -n ${K8S_NAMESPACE}
+
+                                kubectl rollout status deployment/cloud-pipeline-app ^
+                                    -n ${K8S_NAMESPACE} ^
+                                    --timeout=300s
+                            """
+                        }
+                    }
                 }
             }
         }
@@ -211,55 +286,80 @@ pipeline {
                     string(credentialsId: 'azure-tenant-id',       variable: 'AZURE_TENANT_ID'),
                     string(credentialsId: 'azure-subscription-id', variable: 'AZURE_SUBSCRIPTION_ID')
                 ]) {
-                    sh """
-                        az login --service-principal \\
-                            --username "\$AZURE_CLIENT_ID" \\
-                            --password "\$AZURE_CLIENT_SECRET" \\
-                            --tenant   "\$AZURE_TENANT_ID" \\
-                            --output   none
+                    script {
+                        if (isUnix()) {
+                            sh """
+                                az login --service-principal \\
+                                    --username "\$AZURE_CLIENT_ID" \\
+                                    --password "\$AZURE_CLIENT_SECRET" \\
+                                    --tenant   "\$AZURE_TENANT_ID" \\
+                                    --output   none
 
-                        az aks get-credentials \\
-                            --resource-group ${AKS_RESOURCE_GROUP} \\
-                            --name           ${AKS_CLUSTER} \\
-                            --overwrite-existing
+                                az aks get-credentials \\
+                                    --resource-group ${AKS_RESOURCE_GROUP} \\
+                                    --name           ${AKS_CLUSTER} \\
+                                    --overwrite-existing
 
-                        echo "--- Pods ---"
-                        kubectl get pods -n ${K8S_NAMESPACE} -l app=cloud-pipeline-app -o wide
+                                echo "--- Pods ---"
+                                kubectl get pods -n ${K8S_NAMESPACE} -l app=cloud-pipeline-app -o wide
 
-                        echo "--- Service ---"
-                        kubectl get svc -n ${K8S_NAMESPACE}
+                                echo "--- Service ---"
+                                kubectl get svc -n ${K8S_NAMESPACE}
 
-                        echo "--- Deployment ---"
-                        kubectl get deployment cloud-pipeline-app -n ${K8S_NAMESPACE}
+                                echo "--- Deployment ---"
+                                kubectl get deployment cloud-pipeline-app -n ${K8S_NAMESPACE}
 
-                        # Get the external IP assigned by Azure Load Balancer
-                        EXTERNAL_IP=\$(kubectl get svc cloud-pipeline-app-service \\
-                            -n ${K8S_NAMESPACE} \\
-                            -o jsonpath='{.status.loadBalancer.ingress[0].ip}')
+                                # Get the external IP assigned by Azure Load Balancer
+                                EXTERNAL_IP=\$(kubectl get svc cloud-pipeline-app-service \\
+                                    -n ${K8S_NAMESPACE} \\
+                                    -o jsonpath='{.status.loadBalancer.ingress[0].ip}')
 
-                        if [ -n "\$EXTERNAL_IP" ]; then
-                            echo "=============================================="
-                            echo "  Application URL : http://\$EXTERNAL_IP"
-                            echo "  Image Tag       : ${IMAGE_TAG}"
-                            echo "  Namespace       : ${K8S_NAMESPACE}"
-                            echo "  AKS Cluster     : ${AKS_CLUSTER}"
-                            echo "=============================================="
+                                if [ -n "\$EXTERNAL_IP" ]; then
+                                    echo "=============================================="
+                                    echo "  Application URL : http://\$EXTERNAL_IP"
+                                    echo "  Image Tag       : ${IMAGE_TAG}"
+                                    echo "  Namespace       : ${K8S_NAMESPACE}"
+                                    echo "  AKS Cluster     : ${AKS_CLUSTER}"
+                                    echo "=============================================="
 
-                            # Smoke test — retry up to 5 times
-                            for i in 1 2 3 4 5; do
-                                STATUS=\$(curl -s -o /dev/null -w "%{http_code}" http://\$EXTERNAL_IP/health || true)
-                                if [ "\$STATUS" = "200" ]; then
-                                    echo "  Smoke test PASSED — /health returned 200 ✔"
-                                    break
+                                    for i in 1 2 3 4 5; do
+                                        STATUS=\$(curl -s -o /dev/null -w "%{http_code}" http://\$EXTERNAL_IP/health || true)
+                                        if [ "\$STATUS" = "200" ]; then
+                                            echo "  Smoke test PASSED — /health returned 200 ✔"
+                                            break
+                                        fi
+                                        echo "  Waiting for app (\$i/5)..."
+                                        sleep 10
+                                    done
+                                else
+                                    echo "External IP not yet assigned — Azure LB is provisioning."
+                                    echo "Run: kubectl get svc -n ${K8S_NAMESPACE} --watch"
                                 fi
-                                echo "  Waiting for app (\$i/5)..."
-                                sleep 10
-                            done
-                        else
-                            echo "External IP not yet assigned — Azure LB is provisioning."
-                            echo "Run: kubectl get svc -n ${K8S_NAMESPACE} --watch"
-                        fi
-                    """
+                            """
+                        } else {
+                            bat """
+                                call az login --service-principal ^
+                                    --username "%AZURE_CLIENT_ID%" ^
+                                    --password "%AZURE_CLIENT_SECRET%" ^
+                                    --tenant   "%AZURE_TENANT_ID%" ^
+                                    --output   none
+
+                                call az aks get-credentials ^
+                                    --resource-group ${AKS_RESOURCE_GROUP} ^
+                                    --name           ${AKS_CLUSTER} ^
+                                    --overwrite-existing
+
+                                echo --- Pods ---
+                                kubectl get pods -n ${K8S_NAMESPACE} -l app=cloud-pipeline-app -o wide
+
+                                echo --- Service ---
+                                kubectl get svc -n ${K8S_NAMESPACE}
+
+                                echo --- Deployment ---
+                                kubectl get deployment cloud-pipeline-app -n ${K8S_NAMESPACE}
+                            """
+                        }
+                    }
                 }
             }
         }
@@ -287,7 +387,13 @@ pipeline {
             """
         }
         always {
-            sh 'docker image prune -f || true'
+            script {
+                if (isUnix()) {
+                    sh 'docker image prune -f || true'
+                } else {
+                    bat 'docker image prune -f || ver >nul'
+                }
+            }
             cleanWs()
         }
     }
