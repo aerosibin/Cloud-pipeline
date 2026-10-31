@@ -37,7 +37,7 @@ public class ApiController {
     public ResponseEntity<GreetingResponse> greet(
             @RequestParam(name = "name", defaultValue = "World") String name) {
 
-        String message = String.format("Hello, %s!", name);
+        String message = String.format("Hello Welcome, %s!", name);
         GreetingResponse response = new GreetingResponse(message, Instant.now().toString());
         return ResponseEntity.ok(response);
     }
