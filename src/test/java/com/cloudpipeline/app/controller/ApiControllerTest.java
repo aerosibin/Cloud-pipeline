@@ -25,7 +25,7 @@ class ApiControllerTest {
         mockMvc.perform(get("/api/greet"))
                 .andExpect(status().isOk())
                 .andExpect(content().contentTypeCompatibleWith("application/json"))
-                .andExpect(jsonPath("$.message").value("Hello, World!"))
+                .andExpect(jsonPath("$.message").value("Hello Welcome, World!"))
                 .andExpect(jsonPath("$.timestamp").isNotEmpty());
     }
 
@@ -34,7 +34,7 @@ class ApiControllerTest {
         mockMvc.perform(get("/api/greet").param("name", "DevOps"))
                 .andExpect(status().isOk())
                 .andExpect(content().contentTypeCompatibleWith("application/json"))
-                .andExpect(jsonPath("$.message").value("Hello, DevOps!"))
+                .andExpect(jsonPath("$.message").value("Hello Welcome, DevOps!"))
                 .andExpect(jsonPath("$.timestamp").isNotEmpty());
     }
 
