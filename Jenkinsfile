@@ -11,7 +11,7 @@
 //
 // Required Jenkins Plugins:
 //   - Pipeline, Git, Docker Pipeline, Credentials Binding,
-//     JUnit, Workspace Cleanup
+//     JUnit, Workspace Cleanup -
 // ============================================================
 
 pipeline {
@@ -20,7 +20,7 @@ pipeline {
 
     // ── Environment Variables ────────────────────────────────
     environment {
-        // Azure Resource Group
+        // Azure Resource Group 
         AZURE_RESOURCE_GROUP    = 'cloud-pipeline-rg'
 
         // Azure Container Registry
