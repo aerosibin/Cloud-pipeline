@@ -11,7 +11,7 @@
 //
 // Required Jenkins Plugins:
 //   - Pipeline, Git, Docker Pipeline, Credentials Binding,
-//     JUnit, Workspace Cleanup -
+//     JUnit, Workspace Cleanup
 // ============================================================
 
 pipeline {
@@ -236,6 +236,9 @@ pipeline {
 
                                 kubectl apply -f k8s/namespace.yaml
                                 kubectl apply -f k8s/configmap.yaml -n ${K8S_NAMESPACE}
+                                kubectl apply -f k8s/deployment.yaml -n ${K8S_NAMESPACE}
+                                kubectl apply -f k8s/service.yaml -n ${K8S_NAMESPACE}
+                                kubectl apply -f k8s/hpa.yaml -n ${K8S_NAMESPACE}
 
                                 kubectl set image deployment/cloud-pipeline-app \\
                                     cloud-pipeline-app=${IMAGE_BASE}:${IMAGE_TAG} \\
@@ -263,6 +266,9 @@ pipeline {
 
                                 call kubectl apply -f k8s/namespace.yaml
                                 call kubectl apply -f k8s/configmap.yaml -n ${K8S_NAMESPACE}
+                                call kubectl apply -f k8s/deployment.yaml -n ${K8S_NAMESPACE}
+                                call kubectl apply -f k8s/service.yaml -n ${K8S_NAMESPACE}
+                                call kubectl apply -f k8s/hpa.yaml -n ${K8S_NAMESPACE}
 
                                 call kubectl set image deployment/cloud-pipeline-app ^
                                     cloud-pipeline-app=${IMAGE_BASE}:${IMAGE_TAG} ^
@@ -360,6 +366,10 @@ pipeline {
 
                                 echo --- Deployment ---
                                 call kubectl get deployment cloud-pipeline-app -n ${K8S_NAMESPACE}
+
+                                echo --- Load Balancer External IP ---
+                                call kubectl get svc cloud-pipeline-app-service -n ${K8S_NAMESPACE} -o jsonpath="{.status.loadBalancer.ingress[0].ip}"
+                                echo.
                             """
                         }
                     }
@@ -374,7 +384,7 @@ pipeline {
             echo """
 ╔══════════════════════════════════════════════╗
 ║   Pipeline SUCCESS  ✔                        ║
-║   Build    : #${BUILD_NUMBER}                ║
+║   Build    : #${BUILD_NUMBER}                        ║
 ║   Image tag: ${IMAGE_TAG}                    ║
 ║   Registry : ${ACR_LOGIN_SERVER}             ║
 ║   Cluster  : ${AKS_CLUSTER}                  ║
