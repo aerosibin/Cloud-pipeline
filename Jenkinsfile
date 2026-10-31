@@ -187,6 +187,7 @@ pipeline {
                             """
                         } else {
                             bat """
+                                @set "PATH=C:\\Program Files\\Microsoft SDKs\\Azure\\CLI2\\wbin;%PATH%"
                                 call az login --service-principal ^
                                     --username  "%AZURE_CLIENT_ID%" ^
                                     --password  "%AZURE_CLIENT_SECRET%" ^
@@ -194,7 +195,7 @@ pipeline {
                                     --output    none
 
                                 call az account set --subscription "%AZURE_SUBSCRIPTION_ID%"
-                                call az acr login --name ${ACR_NAME}
+                                call az acr login --name ${ACR_NAME} || echo %AZURE_CLIENT_SECRET%| docker login ${ACR_LOGIN_SERVER} -u %AZURE_CLIENT_ID% --password-stdin
                                 docker push ${IMAGE_BASE}:${IMAGE_TAG}
                                 docker push ${IMAGE_BASE}:latest
                             """
@@ -246,6 +247,7 @@ pipeline {
                             """
                         } else {
                             bat """
+                                @set "PATH=C:\\Program Files\\Microsoft SDKs\\Azure\\CLI2\\wbin;%PATH%"
                                 call az login --service-principal ^
                                     --username  "%AZURE_CLIENT_ID%" ^
                                     --password  "%AZURE_CLIENT_SECRET%" ^
@@ -259,14 +261,14 @@ pipeline {
                                     --name           ${AKS_CLUSTER} ^
                                     --overwrite-existing
 
-                                kubectl apply -f k8s/namespace.yaml
-                                kubectl apply -f k8s/configmap.yaml -n ${K8S_NAMESPACE}
+                                call kubectl apply -f k8s/namespace.yaml
+                                call kubectl apply -f k8s/configmap.yaml -n ${K8S_NAMESPACE}
 
-                                kubectl set image deployment/cloud-pipeline-app ^
+                                call kubectl set image deployment/cloud-pipeline-app ^
                                     cloud-pipeline-app=${IMAGE_BASE}:${IMAGE_TAG} ^
                                     -n ${K8S_NAMESPACE}
 
-                                kubectl rollout status deployment/cloud-pipeline-app ^
+                                call kubectl rollout status deployment/cloud-pipeline-app ^
                                     -n ${K8S_NAMESPACE} ^
                                     --timeout=300s
                             """
@@ -338,6 +340,7 @@ pipeline {
                             """
                         } else {
                             bat """
+                                @set "PATH=C:\\Program Files\\Microsoft SDKs\\Azure\\CLI2\\wbin;%PATH%"
                                 call az login --service-principal ^
                                     --username "%AZURE_CLIENT_ID%" ^
                                     --password "%AZURE_CLIENT_SECRET%" ^
@@ -350,13 +353,13 @@ pipeline {
                                     --overwrite-existing
 
                                 echo --- Pods ---
-                                kubectl get pods -n ${K8S_NAMESPACE} -l app=cloud-pipeline-app -o wide
+                                call kubectl get pods -n ${K8S_NAMESPACE} -l app=cloud-pipeline-app -o wide
 
                                 echo --- Service ---
-                                kubectl get svc -n ${K8S_NAMESPACE}
+                                call kubectl get svc -n ${K8S_NAMESPACE}
 
                                 echo --- Deployment ---
-                                kubectl get deployment cloud-pipeline-app -n ${K8S_NAMESPACE}
+                                call kubectl get deployment cloud-pipeline-app -n ${K8S_NAMESPACE}
                             """
                         }
                     }
