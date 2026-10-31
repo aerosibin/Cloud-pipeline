@@ -138,6 +138,7 @@ pipeline {
                     if (isUnix()) {
                         sh """
                             docker build \\
+                                --no-cache \\
                                 --tag ${IMAGE_BASE}:${IMAGE_TAG} \\
                                 --tag ${IMAGE_BASE}:latest \\
                                 --label "build.number=${BUILD_NUMBER}" \\
@@ -148,6 +149,7 @@ pipeline {
                     } else {
                         bat """
                             docker build ^
+                                --no-cache ^
                                 --tag ${IMAGE_BASE}:${IMAGE_TAG} ^
                                 --tag ${IMAGE_BASE}:latest ^
                                 --label "build.number=${BUILD_NUMBER}" ^
