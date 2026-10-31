@@ -1,5 +1,4 @@
 # Exclude build artifacts and IDE files
-target/
 *.class
 
 # Exclude version control metadata
