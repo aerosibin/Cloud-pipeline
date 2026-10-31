@@ -19,7 +19,7 @@ public class HomeController {
     @Value("${info.app.name:Cloud Pipeline Demo App}")
     private String appName;
 
-    @Value("${info.app.version:1.0.0}")
+    @Value("${info.app.version:1.0.1}")
     private String appVersion;
 
     @Value("${info.app.description:End-to-End CI/CD Pipeline Demo Application}")
