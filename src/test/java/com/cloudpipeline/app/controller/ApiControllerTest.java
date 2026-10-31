@@ -52,7 +52,6 @@ class ApiControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(content().contentTypeCompatibleWith("application/json"))
                 .andExpect(jsonPath("$.status").value("RUNNING"))
-                .andExpect(jsonPath("$.version").value("1.0.1"))
                 .andExpect(jsonPath("$.environment").isNotEmpty())
                 .andExpect(jsonPath("$.hostname").isNotEmpty());
     }

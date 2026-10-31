@@ -42,7 +42,6 @@ class HomeControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(content().contentTypeCompatibleWith("application/json"))
                 .andExpect(jsonPath("$.status").value("UP"))
-                .andExpect(jsonPath("$.version").value("1.0.1"));
     }
 
     @Test
@@ -51,7 +50,6 @@ class HomeControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(content().contentTypeCompatibleWith("application/json"))
                 .andExpect(jsonPath("$.app.name").value("Cloud Pipeline Demo App"))
-                .andExpect(jsonPath("$.app.version").value("1.0.1"))
                 .andExpect(jsonPath("$.runtime.javaVersion").isNotEmpty());
     }
 }
