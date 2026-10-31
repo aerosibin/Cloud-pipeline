@@ -34,8 +34,8 @@ RUN addgroup -S appgroup && adduser -S appuser -G appgroup
 
 WORKDIR /app
 
-# Copy the new JAR packaged by Jenkins in Stage 4
-COPY --chown=appuser:appgroup target/cloud-pipeline-app.jar app.jar
+# Copy the fat JAR from the builder stage
+COPY --from=builder --chown=appuser:appgroup /workspace/target/app.jar app.jar
 
 # Switch to non-root user
 USER appuser
