@@ -21,7 +21,7 @@
     <packaging>jar</packaging>
 
     <name>cloud-pipeline-app</name>
-    <description>End-to-End CI/CD Pipeline Demo Application using Jenkins, Docker, and GKE</description>
+    <description>End-to-End CI/CD Pipeline Demo Application using Jenkins, Docker, and AKS</description>
     <url>https://github.com/your-org/cloud-pipeline-app</url>
 
     <!-- ===== Properties ===== -->
