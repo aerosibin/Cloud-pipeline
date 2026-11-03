@@ -1,5 +1,7 @@
 # ☁️ Cloud Pipeline Demo App
 
+[![Protected by Gitleaks](https://img.shields.io/badge/protected%20by-gitleaks-blue)](https://github.com/gitleaks/gitleaks)
+
 > **End-to-End CI/CD Pipeline** — Jenkins · Microsoft Azure (ACR & AKS) · Maven · Docker · Kubernetes · Ansible
 
 ---
