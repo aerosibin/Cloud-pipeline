@@ -24,7 +24,7 @@ data:
     # App metadata
     info.app.name=Cloud Pipeline Demo App
     info.app.version=1.0.1
-    info.app.description=End-to-End CI/CD Pipeline Demo Application Divya 3
+    info.app.description=End-to-End CI/CD Pipeline Demo Application Divya 4
 
   environment.properties: |
     # Environment-specific settings
