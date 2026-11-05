@@ -16,7 +16,7 @@ import java.util.Map;
 @RestController
 public class HomeController {
 
-    @Value("${info.app.name:Cloud Pipeline Demo App 3}")
+    @Value("${info.app.name:Cloud Pipeline Demo App}")
     private String appName;
 
     @Value("${info.app.version:1.0.1}")
