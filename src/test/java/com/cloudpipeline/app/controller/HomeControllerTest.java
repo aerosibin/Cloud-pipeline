@@ -24,7 +24,7 @@ class HomeControllerTest {
         mockMvc.perform(get("/"))
                 .andExpect(status().isOk())
                 .andExpect(content().contentTypeCompatibleWith("text/html"))
-                .andExpect(content().string(org.hamcrest.Matchers.containsString("Cloud Pipeline Demo App")))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("Cloud Pipeline Demo App 4")))
                 .andExpect(content().string(org.hamcrest.Matchers.containsString("bootstrap")));
     }
 
@@ -49,7 +49,7 @@ class HomeControllerTest {
         mockMvc.perform(get("/info"))
                 .andExpect(status().isOk())
                 .andExpect(content().contentTypeCompatibleWith("application/json"))
-                .andExpect(jsonPath("$.app.name").value("Cloud Pipeline Demo App"))
+                .andExpect(jsonPath("$.app.name").value("Cloud Pipeline Demo App 4"))
                 .andExpect(jsonPath("$.runtime.javaVersion").isNotEmpty());
     }
 }
