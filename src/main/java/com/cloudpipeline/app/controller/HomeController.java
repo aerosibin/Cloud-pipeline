@@ -107,7 +107,7 @@ public class HomeController {
                                         <li class="mb-2">&#128640; <strong>CI/CD:</strong> GitHub Actions</li>
                                         <li class="mb-2">&#128679; <strong>Build:</strong> Maven 3.9 + JDK 21</li>
                                         <li class="mb-2">&#128025; <strong>Registry:</strong> Docker Hub</li>
-                                        <li class="mb-2">&#9749; <strong>Runtime:</strong> AWS EKS (Kubernetes)</li>
+                                        <li class="mb-2">&#9749; <strong>Runtime:</strong> Azure AKS</li>
                                         <li class="mb-2">&#128736;&#65039; <strong>Config:</strong> Ansible</li>
                                     </ul>
                                 </div>
